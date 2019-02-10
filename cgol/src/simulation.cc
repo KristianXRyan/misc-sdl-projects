@@ -86,22 +86,18 @@ void draw(SDL_Renderer *canvas, std::vector<std::vector<Cell>> &board)
     
     // CODE HERE
     
-    SDL_Rect drawCell = {0,0,20,20};
+    SDL_Rect drawCell = {0,0,WIDTH / NUM_CELLS, HEIGHT / NUM_CELLS};
     
-    for(int i = 0; i < WIDTH / 20; i++)
-        for(int j = 0; j < HEIGHT / 20; j++)
+    for(int i = 0; i < NUM_CELLS; i++)
+        for(int j = 0; j < NUM_CELLS; j++)
         {
-            drawCell.x = i * 20;
-            drawCell.y = j * 20;
+            drawCell.x = i * (WIDTH / NUM_CELLS);
+            drawCell.y = j * (WIDTH / NUM_CELLS);
             
             if(board[i][j].getLivingState() == state::ALIVE)
-            {
                 SDL_SetRenderDrawColor(canvas, 255, 255, 255, 0xFF);
-            }
             else
-            {
                 SDL_SetRenderDrawColor(canvas, 0, 0, 0, 0xFF);
-            }   
             
             SDL_RenderFillRect(canvas, &drawCell);
         }
@@ -116,7 +112,7 @@ std::vector<std::vector<Cell>> initCells()
     // random generator for determining if the cell is alive or not
     using sysClock = std::chrono::high_resolution_clock;
     std::mt19937 randomGenerator(sysClock::now().time_since_epoch().count());
-    std::uniform_int_distribution<int> dis(0, 9);
+    std::uniform_int_distribution<int> dis(0, 5);
     
     std::vector<std::vector<Cell>> board(NUM_CELLS, std::vector<Cell>(NUM_CELLS, Cell()));
     for(int i = 0; i < NUM_CELLS; i++)
@@ -132,14 +128,18 @@ std::vector<std::vector<Cell>> initCells()
 }
 
 unsigned int totalAliveNeighbors(const std::vector<std::vector<Cell>> &board,
-    unsigned int x, unsigned int y)
+    int x, int y)
 {
     unsigned int sum = 0;
+    int newX = 0;
+    int newY = 0;
     for(int i = -1; i < 2; i++)
     {
         for(int j = -1; j < 2; j++)
         {
-            if(board[i+x][j+y].getLivingState() == state::ALIVE)
+            newX = (x + i + NUM_CELLS) % NUM_CELLS;
+            newY = (y + j + NUM_CELLS) % NUM_CELLS;
+            if(board[newX][newY].getLivingState() == state::ALIVE)
                 sum++;
         }
     }
@@ -153,11 +153,11 @@ unsigned int totalAliveNeighbors(const std::vector<std::vector<Cell>> &board,
 // runs the simulation
 void update(std::vector<std::vector<Cell>> &board)
 {
-    auto nextBoard = board; // maybe problem?
-    
-    for(unsigned int i = 1; i < NUM_CELLS - 1; i++)
+    auto nextBoard = board;
+        
+    for(int i = 0; i < NUM_CELLS; i++)
     {
-        for(unsigned int j = 1; j < NUM_CELLS - 1; j++)
+        for(int j = 0; j < NUM_CELLS; j++)
         {
             unsigned int numAlive = totalAliveNeighbors(board, i, j);
             bool isAlive = (board[i][j].getLivingState() == state::ALIVE);
@@ -242,13 +242,14 @@ void simulate(graphics &simg)
 // main function
 int main(int argc, char **argv)
 {
+    int returnCode = 0;
     graphics simGraphics;
     if (!initGraphics(simGraphics))
-        return -1;
-    
-    simulate(simGraphics);
-    
-    destoryGraphics(simGraphics);
-    return 0;
-    
+        returnCode = -1;
+    else
+    {
+        simulate(simGraphics);
+        destoryGraphics(simGraphics);
+    }
+    return returnCode;
 }

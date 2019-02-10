@@ -1,6 +1,12 @@
 #ifndef CGOL_CONFIG_HH
 #define CGOL_CONFIG_HH
 
+// TODO
+// Add CMD args
+// add ability to set up a seed with the mouse
+// add color grid 
+// remove 'Cell' class (useless)
+
 constexpr int WIDTH = 600;
 constexpr int HEIGHT = 600;
 
