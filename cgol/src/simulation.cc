@@ -7,7 +7,10 @@
 #include <random>
 
 #include "cell.hh"
-#include "config.hh"
+
+#include "argh.hh"
+
+#define TITLE "Conway's Game of Life"
 
 struct graphics
 {
@@ -17,43 +20,30 @@ struct graphics
 };
 
 // inits SDL
-bool initGraphics(graphics &gObject)
+void initGraphics(graphics &gObject, int width, int height)
 {
-    bool initSuccess = true;
-    try
-    {    
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
-            throw std::runtime_error(std::string("ERROR: could not initialize SDL: ") +
-                SDL_GetError());
-       
-        gObject.gWindow = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_UNDEFINED, 
-            SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_ALLOW_HIGHDPI 
-            | SDL_WINDOW_SHOWN);
-            
-        if (gObject.gWindow == NULL)
-            throw std::runtime_error(std::string("ERROR: SDL Could not initialize a window: ")
-                + SDL_GetError());
-            
-        gObject.canvas = SDL_CreateRenderer(gObject.gWindow, -1, 
-            SDL_RENDERER_ACCELERATED);  
-            
-        if (gObject.canvas == NULL)
-            throw std::runtime_error(std::string("ERROR: could not create a renderer: ")
-                + SDL_GetError());
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
+        throw std::runtime_error(std::string("ERROR: could not initialize SDL: ") +
+            SDL_GetError());
+   
+    gObject.gWindow = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_UNDEFINED, 
+        SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_ALLOW_HIGHDPI 
+        | SDL_WINDOW_SHOWN);
         
-    }
-    catch (std::exception &e)
-    {
-        initSuccess = false;
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error in initialization", 
-            e.what(), NULL);
-        std::cerr << "Error in initialization: " << e.what() << '\n';
-    }
-    return initSuccess;
+    if (gObject.gWindow == NULL)
+        throw std::runtime_error(std::string("ERROR: SDL Could not initialize a window: ")
+            + SDL_GetError());
+        
+    gObject.canvas = SDL_CreateRenderer(gObject.gWindow, -1, 
+        SDL_RENDERER_ACCELERATED);  
+        
+    if (gObject.canvas == NULL)
+        throw std::runtime_error(std::string("ERROR: could not create a renderer: ")
+            + SDL_GetError());    
 }
 
 // uninits SDL
-void destoryGraphics(graphics &gObject)
+void destroyGraphics(graphics &gObject)
 {
     SDL_DestroyRenderer(gObject.canvas); 
     SDL_DestroyWindow(gObject.gWindow);
@@ -79,20 +69,21 @@ bool requestClose(SDL_Event &event)
 }
 
 // draws the cells to the screen
-void draw(SDL_Renderer *canvas, std::vector<std::vector<Cell>> &board)
+void draw(SDL_Renderer *canvas, std::vector<std::vector<Cell>> &board,
+    int width, int height, int rows, int cols)
 {
     SDL_SetRenderDrawColor(canvas, 0, 0, 0, 0xFF);
     SDL_RenderClear(canvas);
     
     // CODE HERE
     
-    SDL_Rect drawCell = {0,0,WIDTH / NUM_CELLS, HEIGHT / NUM_CELLS};
+    SDL_Rect drawCell = {0,0, width / rows, height / cols};
     
-    for(int i = 0; i < NUM_CELLS; i++)
-        for(int j = 0; j < NUM_CELLS; j++)
+    for(int i = 0; i < rows; i++)
+        for(int j = 0; j < cols; j++)
         {
-            drawCell.x = i * (WIDTH / NUM_CELLS);
-            drawCell.y = j * (WIDTH / NUM_CELLS);
+            drawCell.x = i * (width / rows);
+            drawCell.y = j * (height / cols);
             
             if(board[i][j].getLivingState() == state::ALIVE)
                 SDL_SetRenderDrawColor(canvas, 255, 255, 255, 0xFF);
@@ -107,16 +98,16 @@ void draw(SDL_Renderer *canvas, std::vector<std::vector<Cell>> &board)
 }
 
 // init the cells
-std::vector<std::vector<Cell>> initCells()
+std::vector<std::vector<Cell>> initCells(int rows, int columns)
 {
     // random generator for determining if the cell is alive or not
     using sysClock = std::chrono::high_resolution_clock;
     std::mt19937 randomGenerator(sysClock::now().time_since_epoch().count());
     std::uniform_int_distribution<int> dis(0, 5);
     
-    std::vector<std::vector<Cell>> board(NUM_CELLS, std::vector<Cell>(NUM_CELLS, Cell()));
-    for(int i = 0; i < NUM_CELLS; i++)
-        for(int y = 0; y < NUM_CELLS; y++)
+    std::vector<std::vector<Cell>> board(rows, std::vector<Cell>(columns, Cell()));
+    for(int i = 0; i < rows; i++)
+        for(int y = 0; y < columns; y++)
         {
             board[i][y].setXY(i,y);
             if(dis(randomGenerator) == 1)
@@ -128,7 +119,7 @@ std::vector<std::vector<Cell>> initCells()
 }
 
 unsigned int totalAliveNeighbors(const std::vector<std::vector<Cell>> &board,
-    int x, int y)
+    int x, int y, int rows, int cols)
 {
     unsigned int sum = 0;
     int newX = 0;
@@ -137,8 +128,8 @@ unsigned int totalAliveNeighbors(const std::vector<std::vector<Cell>> &board,
     {
         for(int j = -1; j < 2; j++)
         {
-            newX = (x + i + NUM_CELLS) % NUM_CELLS;
-            newY = (y + j + NUM_CELLS) % NUM_CELLS;
+            newX = (x + i + rows) % rows;
+            newY = (y + j + cols) % cols;
             if(board[newX][newY].getLivingState() == state::ALIVE)
                 sum++;
         }
@@ -151,15 +142,15 @@ unsigned int totalAliveNeighbors(const std::vector<std::vector<Cell>> &board,
 }
 
 // runs the simulation
-void update(std::vector<std::vector<Cell>> &board)
+void update(std::vector<std::vector<Cell>> &board, int rows, int cols)
 {
     auto nextBoard = board;
-        
-    for(int i = 0; i < NUM_CELLS; i++)
+    
+    for(int i = 0; i < rows; i++)
     {
-        for(int j = 0; j < NUM_CELLS; j++)
+        for(int j = 0; j < cols; j++)
         {
-            unsigned int numAlive = totalAliveNeighbors(board, i, j);
+            unsigned int numAlive = totalAliveNeighbors(board, i, j, rows, cols);
             bool isAlive = (board[i][j].getLivingState() == state::ALIVE);
             Cell &nCell = nextBoard[i][j];
             
@@ -173,9 +164,10 @@ void update(std::vector<std::vector<Cell>> &board)
 }
 
 // contains the main game loop
-void simulate(graphics &simg)
+void simulate(graphics &simg, const Arghandler &argh)
 {
-    std::vector<std::vector<Cell>> board = initCells();
+    std::vector<std::vector<Cell>> board = initCells(argh.getRows(), 
+        argh.getCols());
     // main loop, based off of the main game loop used in Minecraft by Markus
     // "Notch" Persson
 
@@ -185,8 +177,8 @@ void simulate(graphics &simg)
     
     const milliseconds oneSecond = milliseconds(1000);
     
-    const double timeUpdate = 1000000000 / UPS;
-    const double timeFrames = 1000000000 / FPS;
+    const double timeUpdate = 1000000000 / argh.getUPS();
+    const double timeFrames = 1000000000 / argh.getFPS();
     
     double deltaUpdate = 0.0;
     double deltaFrames = 0.0;
@@ -217,14 +209,15 @@ void simulate(graphics &simg)
         
         while(deltaUpdate >= 1)
         {
-            update(board);
+            update(board, argh.getRows(), argh.getCols());
             ticks++;
             deltaUpdate--;
         }
         
         while(deltaFrames >= 1)
         {
-            draw(simg.canvas, board);
+            draw(simg.canvas, board, argh.getWidth(), argh.getHeight(),
+                argh.getRows(), argh.getCols());
             frames++;
             deltaFrames--;
         }
@@ -244,12 +237,29 @@ int main(int argc, char **argv)
 {
     int returnCode = 0;
     graphics simGraphics;
-    if (!initGraphics(simGraphics))
-        returnCode = -1;
-    else
+    bool initError = false;
+    Arghandler argh;
+    
+    try
     {
-        simulate(simGraphics);
-        destoryGraphics(simGraphics);
+        argh.parseArgs(argc, argv);
+    
+        initGraphics(simGraphics, argh.getWidth(), argh.getHeight());
     }
+    catch(std::exception &e)
+    {
+        returnCode = -1;
+        initError = true;
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error in initialization", 
+            e.what(), NULL);
+        std::cerr << "Error in initialization: " << e.what() << '\n';
+    }
+    
+    if(!initError)
+    {
+        simulate(simGraphics, argh);
+        destroyGraphics(simGraphics);
+    }
+    
     return returnCode;
 }

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5.2)
 
-set(CMAKE_BUILD_TYPE debug)
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE release)
+endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 
 set(CMAKE_CXX_VERSION 11)
@@ -13,11 +15,13 @@ project(cgol)
 file(GLOB HEAD
 	head/config.hh
 	head/cell.hh
+	head/argh.hh
 )
 
 file(GLOB SRC
 	src/simulation.cc
 	src/cell.cc
+	src/argh.cc
 )
 
 include_directories(
