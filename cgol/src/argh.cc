@@ -76,7 +76,7 @@ void Arghandler::parseArgs(int argc, char **argv)
         else if(arg.compare("-u") == 0)
         {
             if(i < args.size() - 1)
-                m_ups = std::stoi(args[++i]);
+                m_ups = std::stod(args[++i]);
             else
                 throw std::runtime_error(std::string("flag ") + 
                     "-u" + std::string(" does not have an option."));
@@ -84,7 +84,7 @@ void Arghandler::parseArgs(int argc, char **argv)
         else if(arg.compare("-f") == 0)
         {
             if(i < args.size() - 1)
-                m_fps = std::stoi(args[++i]);
+                m_fps = std::stod(args[++i]);
             else
                 throw std::runtime_error(std::string("Error: flag ") + 
                     "-f" + std::string(" does not have an option."));

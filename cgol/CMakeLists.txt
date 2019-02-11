@@ -14,13 +14,11 @@ project(cgol)
 
 file(GLOB HEAD
 	head/config.hh
-	head/cell.hh
 	head/argh.hh
 )
 
 file(GLOB SRC
 	src/simulation.cc
-	src/cell.cc
 	src/argh.cc
 )
 

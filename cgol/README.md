@@ -10,11 +10,11 @@ The file head/config.hh contains various defaults like the window size, the spee
 
 ## Flags
 
--w [int]   The width of the window
--h [int]   The height of the window 
--r [int]   The number of rows of cells
--c [int]   The number of columns of cells
--u [int]   The number of times to update the simulation per second
--f [int]   The number of frames to render per second (defaults to your monitor's refresh rate)
--m Allows you to manually start the simulation with your mouse (feature coming soon) 
+* -w [int]   The width of the window
+* -h [int]   The height of the window 
+* -r [int]   The number of rows of cells
+* -c [int]   The number of columns of cells
+* -u [int]   The number of times to update the simulation per second
+* -f [int]   The number of frames to render per second (defaults to your monitor's refresh rate)
+* -m Allows you to manually start the simulation with your mouse (feature coming soon) 
 -
