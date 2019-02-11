@@ -23,7 +23,7 @@ constexpr int HEIGHT = 600;
 #define TITLE "Conway's Game of Life"
 
 const double FPS = 60.0;
-constexpr double UPS = 20.0;
+constexpr double UPS = 15.0;
 
 constexpr int NUM_ROWS = 50;
 constexpr int NUM_COLUMNS = 50;

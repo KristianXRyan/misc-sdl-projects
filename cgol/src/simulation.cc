@@ -7,8 +7,8 @@
 #include <random>
 
 #include "cell.hh"
-
 #include "argh.hh"
+#include "config.hh"
 
 #define TITLE "Conway's Game of Life"
 
@@ -19,11 +19,13 @@ struct graphics
     SDL_Event 	 event;
 };
 
-// inits SDL
-void initGraphics(graphics &gObject, int width, int height)
+// inits SDL, returns the refresh rate of the window
+double initGraphics(graphics &gObject, int width, int height)
 {
+    double fps = FPS;
+    
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
-        throw std::runtime_error(std::string("ERROR: could not initialize SDL: ") +
+        throw std::runtime_error(std::string("could not initialize SDL: ") +
             SDL_GetError());
    
     gObject.gWindow = SDL_CreateWindow(TITLE, SDL_WINDOWPOS_UNDEFINED, 
@@ -31,15 +33,28 @@ void initGraphics(graphics &gObject, int width, int height)
         | SDL_WINDOW_SHOWN);
         
     if (gObject.gWindow == NULL)
-        throw std::runtime_error(std::string("ERROR: SDL Could not initialize a window: ")
+        throw std::runtime_error(std::string("SDL Could not initialize a window: ")
             + SDL_GetError());
         
     gObject.canvas = SDL_CreateRenderer(gObject.gWindow, -1, 
         SDL_RENDERER_ACCELERATED);  
         
     if (gObject.canvas == NULL)
-        throw std::runtime_error(std::string("ERROR: could not create a renderer: ")
+        throw std::runtime_error(std::string("could not create a renderer: ")
             + SDL_GetError());    
+            
+    SDL_DisplayMode mode;
+    int displayIndex = SDL_GetWindowDisplayIndex(gObject.gWindow);
+    
+    if(SDL_GetCurrentDisplayMode(displayIndex, &mode) != 0)
+        throw std::runtime_error(std::string("could not get the refresh rate")
+            + SDL_GetError());
+    if(mode.refresh_rate == 0)
+        throw std::runtime_error(std::string("could not get the refresh rate")
+            + SDL_GetError());
+            
+    fps = static_cast<double>(mode.refresh_rate);        
+    return fps;
 }
 
 // uninits SDL
@@ -237,14 +252,15 @@ int main(int argc, char **argv)
 {
     int returnCode = 0;
     graphics simGraphics;
-    bool initError = false;
+    bool initError = false;   
     Arghandler argh;
     
     try
     {
         argh.parseArgs(argc, argv);
     
-        initGraphics(simGraphics, argh.getWidth(), argh.getHeight());
+        argh.setRefreshRate(initGraphics(simGraphics, 
+            argh.getWidth(), argh.getHeight()));
     }
     catch(std::exception &e)
     {
