@@ -9,10 +9,11 @@ private:
     int  m_height;
     int  m_rows;
     int  m_cols;
+    int  m_likely;
     
     double  m_ups;
     double  m_fps;
-    
+    bool m_fpsSet;
 public:
     // constructor, destructor
     Arghandler();
@@ -27,6 +28,7 @@ public:
     int getHeight() const;
     int getRows() const;
     int getCols() const;
+    int getLikelyhood() const;
     double getUPS() const;
     double getFPS() const;
     

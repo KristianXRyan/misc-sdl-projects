@@ -2,11 +2,8 @@
 #define CGOL_CONFIG_HH
 
 // TODO
-// Add CMD args
-// add ability to set up a seed with the mouse
+// add ability to set up a simulation with the mouse
 // add color grid 
-// remove 'Cell' class (useless)
-// fix bug with screen resizing
 
 // arguments: 
 // -m : manual setup (mouse)
@@ -16,20 +13,21 @@
 // -c : number of columns of cells
 // -u : number of times to update per second
 // -f : the framerate of the game
+// -l : the likelyhood of a cell being alive at the start
+// 
 
-constexpr int WIDTH = 600;
-constexpr int HEIGHT = 600;
+constexpr int WIDTH = 600; // default width of the window
+constexpr int HEIGHT = 600; // default height of the window
 
-#define TITLE "Conway's Game of Life"
+/* default fps if SDL cannot get the refresh rate  */
+const double FPS = 60.0; 
+constexpr double UPS = 15.0; // default update rate
 
-const double FPS = 60.0;
-constexpr double UPS = 15.0;
+constexpr int NUM_ROWS = 50; // default number of rows
+constexpr int NUM_COLUMNS = 50; // default number of columns
 
-constexpr int NUM_ROWS = 50;
-constexpr int NUM_COLUMNS = 50;
+constexpr bool MANUAL_INIT = false; // set the program manually
 
-constexpr int NUM_CELLS = 0;
-
-constexpr bool MANUAL_INIT = false;
+constexpr int LIKELY = 5; // likelyhood of a cell being alive (1 in <number>)
 
 #endif // CGOL_CONFIG_HH

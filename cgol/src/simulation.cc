@@ -7,16 +7,17 @@
 #include <random>
 
 #include "argh.hh"
-#include "config.hh"
 
-#define TITLE "Conway's Game of Life"
+#define TITLE "Conway's Game of Life" // default window title
 
+/* the state of the cell  */
 enum class CellState
 {
     ALIVE,
     DEAD
 };
 
+/* wrapper for the SDL graphics structs  */
 struct graphics
 {
     SDL_Window   *gWindow;
@@ -24,10 +25,10 @@ struct graphics
     SDL_Event 	 event;
 };
 
-// inits SDL, returns the refresh rate of the window
+/* inits SDL, returns the refresh rate as a double  */
 double initGraphics(graphics &gObject, int width, int height)
 {
-    double fps = FPS;
+    double fps = -1.0;
     
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0)
         throw std::runtime_error(std::string("could not initialize SDL: ") +
@@ -48,22 +49,20 @@ double initGraphics(graphics &gObject, int width, int height)
         throw std::runtime_error(std::string("could not create a renderer: ")
             + SDL_GetError());    
             
-    // getting the monitor refresh rate
+    /* getting the monitor refresh rate */
     SDL_DisplayMode mode;
     int displayIndex = SDL_GetWindowDisplayIndex(gObject.gWindow);
     
     if(SDL_GetCurrentDisplayMode(displayIndex, &mode) != 0)
-        throw std::runtime_error(std::string("could not get the refresh rate")
-            + SDL_GetError());
+        return fps;
     if(mode.refresh_rate == 0)
-        throw std::runtime_error(std::string("could not get the refresh rate")
-            + SDL_GetError());
+        return fps;
             
     fps = static_cast<double>(mode.refresh_rate);        
     return fps;
 }
 
-// uninits SDL
+/* Destroys the sdl graphics structs  */
 void destroyGraphics(graphics &gObject)
 {
     SDL_DestroyRenderer(gObject.canvas); 
@@ -71,8 +70,8 @@ void destroyGraphics(graphics &gObject)
     SDL_Quit();
 }
 
-// check if the player is trying to close the window
-bool requestClose(SDL_Event &event)
+/* check if the player is trying to close the window */
+bool playerIsRequestingClose(SDL_Event &event)
 {
     bool quit = false;
     while(SDL_PollEvent(&event))
@@ -96,8 +95,6 @@ void draw(SDL_Renderer *canvas, std::vector<std::vector<CellState>> &board,
     SDL_SetRenderDrawColor(canvas, 0, 0, 0, 0xFF);
     SDL_RenderClear(canvas);
     
-    // CODE HERE
-    
     SDL_Rect drawCell = {0,0, width / rows, height / cols};
     
     for(int i = 0; i < rows; i++)
@@ -113,31 +110,32 @@ void draw(SDL_Renderer *canvas, std::vector<std::vector<CellState>> &board,
             
             SDL_RenderFillRect(canvas, &drawCell);
         }
-    // END CODE
     
     SDL_RenderPresent(canvas);
 }
 
-// init the cells
-std::vector<std::vector<CellState>> initCells(int rows, int columns)
+/* initializes the cell vectors; default value is alive */
+std::vector<std::vector<CellState>> initCells(int rows, int columns, 
+    int likely)
 {
-    // random generator for determining if the cell is alive or not
+    /* random generator for determining if the cell is alive or not */
     using sysClock = std::chrono::high_resolution_clock;
     std::mt19937 randomGenerator(sysClock::now().time_since_epoch().count());
-    std::uniform_int_distribution<int> dis(0, 5);
+    std::uniform_int_distribution<int> dis(0, likely);
     
-    std::vector<std::vector<CellState>> board(rows, std::vector<CellState>(columns, CellState::DEAD));
+    std::vector<std::vector<CellState>> board(rows, std::vector<CellState>
+        (columns, CellState::DEAD));
+    
+    /* uses the random seed to create random alive cells */
     for(int i = 0; i < rows; i++)
         for(int y = 0; y < columns; y++)
-        {
-            if(dis(randomGenerator) == 1)
+            if(dis(randomGenerator) == 0)
                 board[i][y] = CellState::ALIVE;
-            else
-                board[i][y] = CellState::DEAD;
-        }
+    
     return board;          
 }
 
+/* gets the total number of neighboring cells that are alive */
 unsigned int totalAliveNeighbors(const std::vector<std::vector<CellState>> &board,
     int x, int y, int rows, int cols)
 {
@@ -161,11 +159,13 @@ unsigned int totalAliveNeighbors(const std::vector<std::vector<CellState>> &boar
     return sum;    
 }
 
-// runs the simulation
+/* updates the cells  */
 void update(std::vector<std::vector<CellState>> &board, int rows, int cols)
 {
+    /* the copy of the board to determine how many living cells are nearby */
     auto nextBoard = board;
     
+    /* Loops through each cell and applies the rules of the game of life */
     for(int i = 0; i < rows; i++)
     {
         for(int j = 0; j < cols; j++)
@@ -183,26 +183,29 @@ void update(std::vector<std::vector<CellState>> &board, int rows, int cols)
     board = nextBoard;
 }
 
-// contains the main game loop
+/* contains the main game loop */
 void simulate(graphics &simg, const Arghandler &argh)
 {
     std::vector<std::vector<CellState>> board = initCells(argh.getRows(), 
-        argh.getCols());
-    // main loop, based off of the main game loop used in Minecraft by Markus
-    // "Notch" Persson
-
-    // TODO : make this an arg:
+        argh.getCols(), argh.getLikelyhood());
+    /* main loop, based off of the main game loop used in Minecraft by Markus
+       "Notch" Persson 													   */
     using namespace std::chrono;
     using sysClock = high_resolution_clock;
     
+    /* For determining when a second has passed  */
     const milliseconds oneSecond = milliseconds(1000);
-    
+    /* For determining how many frames to render and how many updates
+       to run in a second										   */
     const double timeUpdate = 1000000000 / argh.getUPS();
     const double timeFrames = 1000000000 / argh.getFPS();
     
+    /* variable length delta time data */
     double deltaUpdate = 0.0;
     double deltaFrames = 0.0;
     
+    /* For determining how much time has passed since the last
+       run of the loop									    */
     nanoseconds lastTime = duration_cast<nanoseconds>
         (sysClock::now().time_since_epoch());
         
@@ -211,7 +214,8 @@ void simulate(graphics &simg, const Arghandler &argh)
         
     milliseconds timer = duration_cast<milliseconds>
         (sysClock::now().time_since_epoch());
-        
+    
+    /* For keeping track of the frame and update rate  */    
     unsigned int frames = 0;
     unsigned int ticks = 0;
         
@@ -219,7 +223,7 @@ void simulate(graphics &simg, const Arghandler &argh)
     
     while(isRunning)
     {
-        isRunning = !requestClose(simg.event);
+        isRunning = !playerIsRequestingClose(simg.event);
 
         currentTime = duration_cast<nanoseconds>
             (sysClock::now().time_since_epoch());
@@ -260,7 +264,7 @@ int main(int argc, char **argv)
     bool initError = false;   
     Arghandler argh;
     
-    try
+    try // uses exceptions so it can easily output error strings to the user
     {
         argh.parseArgs(argc, argv);
     
