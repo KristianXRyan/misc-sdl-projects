@@ -17,4 +17,3 @@ The file head/config.hh contains various defaults like the window size, the spee
 * -u [int]   The number of times to update the simulation per second
 * -f [int]   The number of frames to render per second (defaults to your monitor's refresh rate)
 * -m Allows you to manually start the simulation with your mouse (feature coming soon) 
--
