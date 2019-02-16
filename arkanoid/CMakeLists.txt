@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.5.2)
 
 if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE release)
+	set(CMAKE_BUILD_TYPE Release)
 endif()
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 
 set(CMAKE_CXX_VERSION 11)
-
 
 if(MSVC)
   # Force to always compile with W4
@@ -15,12 +13,13 @@ if(MSVC)
   else()
   	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
   endif()
-elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+else()
   # Update if necessary
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic")
-  if(CMAKE_BUILD_TYPE eq debug)
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
   	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-  elseif(CMAKE_BUILD_TYPE eq release)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
+elseif(CMAKE_BUILD_TYPE MATCHES Release)
   	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   endif()
 endif()
@@ -33,6 +32,9 @@ file(GLOB HEAD
 	head/arko.hh
 	head/ark.hh
 	head/eventh.hh
+	head/state/state.hh
+	head/state/statem.hh
+	head/state/gstate.hh
 )
 
 file(GLOB SRC
@@ -41,6 +43,9 @@ file(GLOB SRC
 	src/arko.cc
 	src/ark.cc
 	src/eventh.cc
+	src/state/state.cc
+	src/state/statem.cc
+	src/state/gstate.cc
 )
 
 include_directories(

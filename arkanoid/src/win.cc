@@ -31,4 +31,12 @@ namespace ark
             throw std::runtime_error(std::string("Could not create renderer ") +
                 SDL_GetError());
     }
+    
+    void Window::draw()
+    {
+        SDL_SetRenderDrawColor(m_canvas, 0, 0, 0, 0xFF);
+        SDL_RenderClear(m_canvas);
+        
+        SDL_RenderPresent(m_canvas);
+    }
 }

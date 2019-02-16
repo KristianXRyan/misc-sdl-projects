@@ -3,6 +3,7 @@
 
 #include "win.hh"
 #include "eventh.hh"
+#include "state/statem.hh"
 
 namespace ark
 {
@@ -11,6 +12,7 @@ namespace ark
     private:
         Window m_window;
         EventHandler m_eventHandler;
+        StateManager sm;
         
     public:
         Arkanoid();
@@ -24,6 +26,7 @@ namespace ark
         void run();
         void update();
         void draw();
+        void tick();
     };
 }
 

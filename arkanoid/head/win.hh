@@ -24,6 +24,7 @@ namespace ark
         ~Window();
         
         void show();
+        void draw();
     };
 }
 #endif // ARK_WIN_HH

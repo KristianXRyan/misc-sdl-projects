@@ -45,7 +45,7 @@ namespace ark
             throw;
         }
     }
-    
+     
     void Arkanoid::start()
     {
         run();
@@ -54,20 +54,25 @@ namespace ark
     /* Contains the main game loop  */
     void Arkanoid::run()
     {
-        const double FPS = 60.0;
-        const double UPS = 25.0;
-        
+        const double fps = 60.0;
+        const double tps = 25.0;
+    
         using namespace std::chrono;
         using sysClock = high_resolution_clock;
         
+        /* For determining when a second has passed  */
         const milliseconds oneSecond = milliseconds(1000);
+        /* For determining how many frames to render and how many updates
+           to run in a second             */
+        const double timeUpdate = 1000000000 / fps;
+        const double timeFrames = 1000000000 / tps;
         
-        const double timeU = 1000000000 / UPS;
-        const double timeF = 1000000000 / FPS;
-        
+        /* variable length delta time data */
         double deltaUpdate = 0.0;
         double deltaFrames = 0.0;
         
+        /* For determining how much time has passed since the last
+           run of the loop             */
         nanoseconds lastTime = duration_cast<nanoseconds>
             (sysClock::now().time_since_epoch());
             
@@ -76,31 +81,35 @@ namespace ark
             
         milliseconds timer = duration_cast<milliseconds>
             (sysClock::now().time_since_epoch());
-            
+        
+        /* For keeping track of the frame and update rate  */    
         unsigned int frames = 0;
         unsigned int ticks = 0;
             
-        bool running = true;
+        bool isRunning = true;
         
-        while(running)
+        while(isRunning)
         {
+            // event stuff
             m_eventHandler.listen();
-            running = !m_eventHandler.isPlayerRequestingClose();
-            
-            currentTime = duration_cast<nanoseconds> 
-                (high_resolution_clock::now().time_since_epoch());
-            deltaUpdate += (currentTime - lastTime).count() / timeU;
-            deltaFrames += (currentTime - lastTime).count() / timeF;
+            isRunning = !m_eventHandler.isPlayerRequestingClose();
+
+            currentTime = duration_cast<nanoseconds>
+                (sysClock::now().time_since_epoch());
+            deltaUpdate += (currentTime - lastTime).count() / timeUpdate;
+            deltaFrames += (currentTime - lastTime).count() / timeFrames;
             lastTime = currentTime;
             
             while(deltaUpdate >= 1)
             {
+                tick();
                 ticks++;
                 deltaUpdate--;
             }
             
             while(deltaFrames >= 1)
             {
+                draw();
                 frames++;
                 deltaFrames--;
             }
@@ -109,21 +118,19 @@ namespace ark
                 - timer >= oneSecond)
             {
                 frames = 0;
-                ticks = 0;
-                timer += oneSecond;
+                ticks  = 0;
+                timer  += oneSecond;
             }
-                    
-            draw();
         }
     }
     
-    void Arkanoid::update()
+    void Arkanoid::tick()
     {
     
     }
     
     void Arkanoid::draw()
     {
-    
+        m_window.draw();
     }
 }
