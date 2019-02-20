@@ -4,19 +4,29 @@
 
 namespace ark
 {
-    ArkObject::ArkObject(int x, int y) 
-        : m_position({ x, y })
+    ArkObject::ArkObject(int x, int y, int w, int h) 
+        : m_area({ x, y, w, h })
     {
-
     }
+    
 
-    ArkObject::~ArkObject()
+    int ArkObject::getx() const
     {
-
+        return m_area.x;
     }
-
-    void ArkObject::drawTo(SDL_Renderer *canvas) const
+    
+    int  ArkObject::gety() const
     {
-
+        return m_area.y;
+    }
+    
+    int  ArkObject::getWidth() const
+    {
+        return m_area.w;
+    }
+    
+    int  ArkObject::getHeight() const
+    {
+        return m_area.h;
     }
 }

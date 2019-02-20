@@ -21,7 +21,7 @@ namespace ark
         const static StateManager::StateType TYPE = StateManager::StateType::GAMESTATE;
         
         GameState(StateManager&);
-        ~GameState() = default;
+        virtual ~GameState() = default;
     };
 }
 

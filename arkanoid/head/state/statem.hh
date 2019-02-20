@@ -12,7 +12,6 @@ namespace ark
     {
     private:
         
-        
         unsigned int m_currentState;
         std::vector<std::unique_ptr<ark::State>> m_gameStates;
         

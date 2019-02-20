@@ -35,6 +35,9 @@ file(GLOB HEAD
 	head/state/state.hh
 	head/state/statem.hh
 	head/state/gstate.hh
+	head/state/mstate.hh
+	head/garko.hh
+	head/marko.hh
 )
 
 file(GLOB SRC
@@ -46,6 +49,9 @@ file(GLOB SRC
 	src/state/state.cc
 	src/state/statem.cc
 	src/state/gstate.cc
+	src/state/mstate.cc
+	src/garko.cc
+	src/marko.cc
 )
 
 include_directories(

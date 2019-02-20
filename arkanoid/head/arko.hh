@@ -1,26 +1,26 @@
 #ifndef ARKO_HH
 #define ARKO_HH
 
-struct SDL_Renderer;
+#include <SDL2/SDL.h>
 
 namespace ark
 {
     class ArkObject
     {
     private:
-        struct coord
-        {
-            int x;
-            int y;
-        };
-        
-        coord m_position;
+        SDL_Rect m_area;
         
     public:
-        ArkObject(int,int);
-        ~ArkObject();
+        ArkObject(int,int,int,int);
+        virtual ~ArkObject() = default;
         
-        void drawTo(SDL_Renderer *) const;
+        virtual void drawTo(SDL_Renderer *) const = 0;
+        
+        // getters
+        int getx() const;
+        int gety() const;
+        int getWidth() const;
+        int getHeight() const;
     };
 
 }

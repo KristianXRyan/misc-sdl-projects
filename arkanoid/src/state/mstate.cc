@@ -1,9 +1,10 @@
-#include "state/gstate.hh"
+#include "state/mstate.hh"
+
 #include "state/statem.hh"
 
 namespace ark
-{	
-    GameState::GameState(StateManager &sm)
+{
+    MenuState::MenuState(ark::StateManager &sm)
         : State(sm)
     {
         

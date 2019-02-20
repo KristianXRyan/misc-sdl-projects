@@ -12,7 +12,7 @@ namespace ark
     private:
         Window m_window;
         EventHandler m_eventHandler;
-        StateManager sm;
+        StateManager m_sm;
         
     public:
         Arkanoid();
