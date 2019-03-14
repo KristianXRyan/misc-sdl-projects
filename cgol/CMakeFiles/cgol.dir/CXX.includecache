@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+./head/argh.hh
+
+./head/config.hh
+
+/home/kristian/CSProjects/misc-sdl-projects/cgol/src/argh.cc
+argh.hh
+/home/kristian/CSProjects/misc-sdl-projects/cgol/src/argh.hh
+config.hh
+/home/kristian/CSProjects/misc-sdl-projects/cgol/src/config.hh
+vector
+-
+string
+-
+stdexcept
+-
+SDL2/SDL.h
+-
+
+/home/kristian/CSProjects/misc-sdl-projects/cgol/src/simulation.cc
+SDL2/SDL.h
+-
+iostream
+-
+stdexcept
+-
+string
+-
+chrono
+-
+vector
+-
+random
+-
+argh.hh
+/home/kristian/CSProjects/misc-sdl-projects/cgol/src/argh.hh
+

@@ -1,0 +1,1 @@
+/usr/bin/g++   -O3 -Wall   CMakeFiles/cgol.dir/src/argh.cc.o CMakeFiles/cgol.dir/src/simulation.cc.o  -o bin/cgol -lSDL2main -lSDL2 

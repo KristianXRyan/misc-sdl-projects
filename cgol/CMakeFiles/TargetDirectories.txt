@@ -1,0 +1,3 @@
+/home/kristian/CSProjects/misc-sdl-projects/cgol/CMakeFiles/rebuild_cache.dir
+/home/kristian/CSProjects/misc-sdl-projects/cgol/CMakeFiles/cgol.dir
+/home/kristian/CSProjects/misc-sdl-projects/cgol/CMakeFiles/edit_cache.dir
