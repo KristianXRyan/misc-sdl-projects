@@ -95,7 +95,7 @@ void draw(SDL_Renderer *canvas, std::vector<std::vector<CellState>> &board,
     SDL_SetRenderDrawColor(canvas, 0, 0, 0, 0xFF);
     SDL_RenderClear(canvas);
     
-    SDL_Rect drawCell = {0,0, width / rows, height / cols};
+    SDL_Rect drawCell = { 0, 0, width / rows, height / cols };
     
     for(int i = 0; i < rows; i++)
         for(int j = 0; j < cols; j++)
