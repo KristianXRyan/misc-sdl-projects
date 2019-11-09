@@ -9,6 +9,7 @@ extern "C"
 {
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_gpu.h>
+#include <SDL2/SDL_ttf.h>
 }
 
 // Contains local static data
@@ -48,7 +49,7 @@ namespace
         int x;
         int y;
 
-        bool operator==(coord other)
+        bool operator==(coord other) const
         {
             if((this->x == other.x) && (this->y == other.y))
             {
@@ -58,7 +59,7 @@ namespace
             return false;
         }
 
-        bool operator!=(coord other)
+        bool operator!=(coord other) const
         {
             if((this->x == other.x) && (this->y == other.y))
             {
@@ -79,6 +80,7 @@ namespace
         std::vector<::coord> allCoords;        // coordinates of all snake body parts
     };
 
+    // Struct for keeping track of where the pellets are.
     struct Pellet
     {
         ::coord co;
@@ -105,11 +107,9 @@ namespace
 
     static Snake player;
 
-    static bool IsCollideWithSnake(coord other)
-    {
-        return false;
-    }
-    
+    /*
+     * Creates pellets on the map.
+     */
     static void CreatePellets()
     {
         
@@ -156,6 +156,9 @@ namespace
         ::greenPelletExists = true;
     }
 
+    /*
+     * Inits the SDL contructs and the board of cells.
+     */
     static bool Init()
     {
         // init sdl
@@ -229,7 +232,7 @@ namespace
     }
 
     /*
-     * 
+     * Interprets keyboard input. Can use arrow keys and WASD.
      */
     static inline void GetKbdInput(SDL_Event &event)
     {
@@ -298,60 +301,38 @@ namespace
      */
     static void Die()
     {
-        // TODO
         exit(0);
     }
-    
+
     /*
-     * The game simulation.
+     * Determine if the snake head is touching a pellet.
+     * If it is, return true. Otherwise, return false.
      */
-    static inline void Simulate()
+    static inline bool IsSnakeIsTouchingPellet(coord &headCoord)
     {
-        auto &headCoord  = ::player.allCoords[0]; // 0 will always be the head
-        bool foundPellet =                 false;
-
-        // check that the snake head isn't touching the snake body, if so,
-        // kill the game
-        for (unsigned i = 1; i < ::player.allCoords.size(); i++)
-        {
-            if(::player.allCoords[i] == headCoord)
-            {
-                std::cout << "The player is dead!\n";
-                ::Die();
-            }
-        }
-
-        auto destroyRedPellet = [&]()
-                                {
-                                    ::redPel.co = { -1, -1 };
-                                    for(auto &i : cells)
-                                    {
-                                        for(auto &j : i)
-                                        {
-                                            if(j == ::CellState::RedPellet)
-                                            {
-                                                j = ::CellState::Nothing;
-                                            }
-                                        }
-                                    }
-                                };
-
-        // check if the snake head is touching any pellets
+        bool isTouching = false;
+        
         if(headCoord == ::greenPel.co)
         {
             ::player.points += greenScore;
             ::greenPelletExists = false;
             ::greenPel.co = ::coord{ -1, -1 };
-            destroyRedPellet();
-            foundPellet = true;
+            isTouching = true;
         }
         else if(headCoord == ::redPel.co)
         {
             ::player.points += redScore;
-            foundPellet = true;
-            destroyRedPellet();
+            isTouching = true;
         }
 
+        return isTouching;
+    }
+
+    /*
+     * Interpret the keyboard input and change the snake head's coords.
+     */
+    static inline void InterpretInput(coord &headCoord)
+    {
         switch(::player.currentDirection)
         {
         case ::SnakeDirection::Up:
@@ -364,6 +345,7 @@ namespace
             break;
 
         case ::SnakeDirection::Down:
+            // move down
             headCoord.y++;
             if(headCoord.y == numCols)
             {
@@ -372,6 +354,7 @@ namespace
             break;
             
         case ::SnakeDirection::Left:
+            // move left
             headCoord.x--;
             if(headCoord.x == -1)
             {
@@ -380,6 +363,7 @@ namespace
             break;
             
         case ::SnakeDirection::Right:
+            // move right
             headCoord.x++;
             if(headCoord.x == numRows)
             {
@@ -390,13 +374,52 @@ namespace
         default: // no direction
             break;
         }
+    }
 
-        // change snake coords in the cells
+    /*
+     * Sets the new state of the cells.
+     */
+    static inline void RenewBoard()
+    {
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                coord curCoord = { i, j };
+                bool isSnakePiece = false;
+
+                // determine if the current cell is actually part of the snake
+                for(auto &snCoord : ::player.allCoords)
+                {
+                    if(snCoord == curCoord)
+                    {
+                        isSnakePiece = true;
+                    }
+                }
+
+                // remove the snake parts of the board if they're no longer
+                // part of the snake
+                if((!isSnakePiece)
+                   && ((cells[i][j] == ::CellState::Snake)
+                       || (cells[i][j] == ::CellState::SnakeHead)))
+                {
+                    cells[i][j] = ::CellState::Nothing;
+                }
+            }
+        } 
+    }
+
+    /*
+     * Change the coordinates of the snake head in the cells array.
+     */
+    static inline void ChangeSnakeHead(coord &headCoord, bool foundPellet)
+    {
         cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
         for(int i = 0; i < numRows; i++)
         {
             for(int j = 0; j < numCols; j++)
             {
+                ::coord curCoord = { i, j };
                 // moving the head
                 if((cells[i][j] == ::CellState::SnakeHead)
                    && (::coord{ i, j } != headCoord)) // make sure it's not the new head
@@ -404,11 +427,71 @@ namespace
                     // growing the snake's body if found enough food
                     if((foundPellet) && (::player.points % ::growScore == 0))
                     {
-                        ::player.allCoords.push_back({ i, j });
+                        ::player.allCoords.insert(::player.allCoords.begin(), { i, j });
+                        return;
                     }
-                    cells[i][j] = ::CellState::Nothing;
+
+                    coord &snakePartCoord = curCoord; // .begin()
+                    // move the snake's body
+                    for(auto it = ::player.allCoords.begin() + 1; it <= ::player.allCoords.end();
+                        it++)
+                    {
+                        *it = snakePartCoord;
+                        snakePartCoord = *it;
+                    }
+
+                    ::RenewBoard();
+                    return;
+
                 }
             }
+        }
+    }
+    
+    /*
+     * The game simulation.
+     */
+    static inline void Simulate()
+    {
+        coord &headCoord  = ::player.allCoords[0]; // 0 will always be the head
+        bool  foundPellet =                 false;
+
+        // check that the snake head isn't touching the snake body, if so,
+        // kill the game
+        for (unsigned i = 1; i < ::player.allCoords.size(); i++)
+        {
+            if(::player.allCoords[i] == headCoord)
+            {
+                std::cout << "The player is dead!\n";
+                ::Die();
+            }
+        }
+
+        foundPellet = ::IsSnakeIsTouchingPellet(headCoord);
+        if(foundPellet)
+        {
+            ::redPel.co = { -1, -1 };
+            for(auto &i : cells)
+            {
+                for(auto &j : i)
+                {
+                    if(j == ::CellState::RedPellet)
+                    {
+                        j = ::CellState::Nothing;
+                    }
+                }
+            }
+            
+        }
+
+        ::InterpretInput(headCoord);
+        
+        ::ChangeSnakeHead(headCoord, foundPellet);
+
+        std::cout << "-------------------------------------\n";
+        for(auto it = ::player.allCoords.begin(); it < ::player.allCoords.end(); it++)
+        {
+            std::cout << "Snake part: " << (*it).x << ' ' << (*it).y << '\n';
         }
         
         // init pellets if they have already been eaten
@@ -432,7 +515,7 @@ namespace
         SDL_Color color;
 
         for(unsigned i = 0; i < numRows; i++)
-        {
+        { 
             for(unsigned j = 0; j < numCols; j++)
             {
                 ::CellState &cell = cells[i][j];
@@ -473,17 +556,22 @@ namespace
         GPU_Flip(target);
     }
 
+    /*
+     * Contains the main game loop.
+     */
     static void Run()
     {
         bool run = true;
 
+        // variables for frame rate control
         namespace chron = std::chrono;
         using clock = chron::high_resolution_clock;
 
         clock::time_point startFrameTime;
         chron::duration<float> frameRenderTime;
 
-        constexpr float frameTime = 1000.0F / 15.0F; // 60 fps
+        // change the denominator to change the frame rate.
+        constexpr float frameTime = 1000.0F / 15.0F; // 15 fps
 
         
         while(run)
@@ -520,6 +608,9 @@ namespace
         }
     }
 
+    /*
+     * Destroy the renderer and free SDL's memory.
+     */
     static void End()
     {
         GPU_FreeTarget(target);
@@ -529,6 +620,9 @@ namespace
     }
 }
 
+/*
+ * The main function.
+ */
 int main(int argc, char *argv[])
 {
     if(!::Init())

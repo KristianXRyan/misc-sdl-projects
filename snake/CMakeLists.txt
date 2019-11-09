@@ -33,4 +33,5 @@ target_link_libraries(
 	SDL2
 
     SDL2_gpu
+    SDL2_ttf
 )
