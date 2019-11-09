@@ -26,12 +26,13 @@ namespace
     {
         Nothing,
         Snake,
+        SnakeHead,
 
         GreenPellet,
         RedPellet
     };
 
-    // Direction of the player/snake
+    // Direction of the ::player/snake
     enum class SnakeDirection : unsigned
     {
         Up,
@@ -42,18 +43,43 @@ namespace
         None
     };
 
-    // Struct represnting the player.
+    struct coord
+    {
+        int x;
+        int y;
+
+        bool operator==(coord other)
+        {
+            if((this->x == other.x) && (this->y == other.y))
+            {
+                return true;
+            }
+            return false;
+        }
+    };
+
+    // Struct represnting the ::player.
     struct Snake
     {
         ::SnakeDirection currentDirection = ::SnakeDirection::None;
         unsigned snakeLength              = 0;
         unsigned numTurnsLeft             = 0;
         unsigned points                   = 0;
+        std::vector<::coord> allCoords;        // coordinates of all snake body parts
+    };
+
+    struct Pellet
+    {
+        ::coord co;
+        ::CellState pelletType;
     };
 
     // game constructs and data
-    constexpr unsigned numRows = 50;
-    constexpr unsigned numCols = 50;
+    constexpr unsigned numRows = 25;
+    constexpr unsigned numCols = 25;
+
+    static Pellet greenPel = { {0, 0}, ::CellState::GreenPellet };
+    static Pellet redPel = { {0, 0}, ::CellState::RedPellet };
 
     static bool greenPelletExists = false;
     
@@ -64,6 +90,10 @@ namespace
 
     static Snake player;
 
+    static bool IsCollideWithSnake(coord other)
+    {
+        return false;
+    }
     
     static void CreatePellets()
     {
@@ -78,21 +108,23 @@ namespace
         auto makePellet = [&](::CellState type)
                           {
                               bool madePellet = false;
+                              ::Pellet &curPel = (type == ::CellState::GreenPellet)
+                                    ? ::greenPel : ::redPel;
 
                               while(!madePellet)
                               {
-                                  for(auto it = cells.begin();
-                                      it < cells.end(); it++)
+                                  for(unsigned i = 0; i < numRows; i++)
                                   {
-                                      for(auto jt = it->begin();
-                                          jt < it->end(); jt++)
+                                      for(unsigned j = 0; j < numCols; j++)
                                       {
+                                          ::CellState &curCell = cells[i][j];
                                           if((dis(randomGenerator) == 0)
-                                             && (*jt == ::CellState::Nothing)) // make sure nothing is on
+                                             && (curCell == ::CellState::Nothing)) // make sure nothing is on
                                               //this particular cell
                                           {
-                                              *jt = type;
+                                              curCell = type;
                                               madePellet = true;
+                                              curPel.co = { static_cast<int>(i), static_cast<int>(j) };
                                               return;
                                           }
                                       }
@@ -104,7 +136,7 @@ namespace
         makePellet(::CellState::GreenPellet);
         makePellet(::CellState::RedPellet);
 
-        greenPelletExists = true;
+        ::greenPelletExists = true;
     }
 
     static bool Init()
@@ -127,7 +159,7 @@ namespace
 
         // init game constructs
 
-        CreatePellets();
+        ::CreatePellets();
 
         auto initSnake = [&]()
                          {
@@ -141,27 +173,37 @@ namespace
                                                           .time_since_epoch()
                                                           .count());
         
-                             std::uniform_int_distribution<unsigned> dis(0,
-                                                                       numRows);
-        
-                             for(auto it = cells.begin();
-                                 it < cells.end(); it++)
+                             std::uniform_int_distribution<unsigned> colDis(0,
+                                                                       numCols);
+
+                             std::uniform_int_distribution<unsigned> rowDis(0,
+                                                                            numRows);
+                             while(!hasMadeSnake)
                              {
-                                 for(auto jt = it->begin();
-                                     jt != it->end(); jt++)
+                                 for(unsigned i = 0; i < numRows; i++)
                                  {
-                                     // also check to make sure the snake
-                                     // doesn't spawn on a pellet
-                                     if((dis(randomGenerator) == 0)
-                                        && (((*jt) != ::CellState::RedPellet)
-                                            && ((*jt) != ::CellState::GreenPellet)))
+                                     if(rowDis(randomGenerator) == 0)
                                      {
-                                         *jt = ::CellState::Snake;
-                                         return;
+                                         for(unsigned j = 0; j < numCols; j++)
+                                         {
+                                             ::CellState &curCell = cells[i][j];
+                                             // also check to make sure the snake
+                                             // doesn't spawn on a pellet
+                                             if((colDis(randomGenerator) == 0)
+                                                && ((curCell != ::CellState::RedPellet)
+                                                    && (curCell != ::CellState::GreenPellet)))
+                                             {
+                                                 curCell = ::CellState::SnakeHead;
+                                                 ::player.allCoords
+                                                       .push_back({ static_cast<int>(i),
+                                                                    static_cast<int>(j) });
+                                                 hasMadeSnake = true;
+                                                 return;
+                                             }
+                                         }
                                      }
                                  }
                              }
-
                          };
 
         initSnake();
@@ -178,22 +220,22 @@ namespace
         {
         case SDLK_UP:
         case SDLK_w:
-            player.currentDirection = ::SnakeDirection::Up;
+            ::player.currentDirection = ::SnakeDirection::Up;
             break;
             
         case SDLK_DOWN:
         case SDLK_s:
-            player.currentDirection = ::SnakeDirection::Down;
+            ::player.currentDirection = ::SnakeDirection::Down;
             break;
 
         case SDLK_LEFT:
         case SDLK_a:
-            player.currentDirection = ::SnakeDirection::Left;
+            ::player.currentDirection = ::SnakeDirection::Left;
             break;
 
         case SDLK_RIGHT:
         case SDLK_d:
-            player.currentDirection = ::SnakeDirection::Right;
+            ::player.currentDirection = ::SnakeDirection::Right;
             break;
 
         case SDLK_ESCAPE:
@@ -235,14 +277,101 @@ namespace
     }
 
     /*
+     * Kill the snake and exit the game.
+     */
+    static void Die()
+    {
+        // TODO
+        exit(0);
+    }
+    
+    /*
      * The game simulation.
      */
     static inline void Simulate()
     {
-        if(!greenPelletExists)
+        auto &headCoord = ::player.allCoords[0];// 0 will always be the head
+
+        // check that the snake head isn't touching the snake body, if so,
+        // kill the game
+        for (unsigned i = 1; i < ::player.allCoords.size(); i++)
+        {
+            if(::player.allCoords[i] == headCoord)
+            {
+                std::cout << "The player is dead!\n";
+                ::Die();
+            }
+        }
+
+        // check if the snake head is touching any pellets
+        if(headCoord == ::greenPel.co)
+        {
+            // TODO
+        }
+        else if(headCoord == ::redPel.co)
+        {
+            // TODO
+        }
+
+        switch(::player.currentDirection)
+        {
+        case ::SnakeDirection::Up:
+            // move up
+            headCoord.y--;
+            if(headCoord.y == -1)
+            {
+                headCoord.y = numCols - 1;
+            }
+            break;
+
+        case ::SnakeDirection::Down:
+            headCoord.y++;
+            if(headCoord.y == numCols)
+            {
+                headCoord.y = 0;
+            }
+            break;
+            
+        case ::SnakeDirection::Left:
+            headCoord.x--;
+            if(headCoord.x == -1)
+            {
+                headCoord.x = numRows - 1;
+            }
+            break;
+            
+        case ::SnakeDirection::Right:
+            headCoord.x++;
+            if(headCoord.x == numRows)
+            {
+                headCoord.x = 0;
+            }
+            break;
+            
+        default: // no direction
+            break;
+        }
+
+        std::cout << "Made it...\n";
+        // change snake coords in the cells
+        cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                if(cells[i][j] == ::CellState::SnakeHead)
+                {
+                    //cells[i][j]
+                }
+            }
+        }
+        
+        // init pellets if they have already been eaten
+        if(!::greenPelletExists)
         {
             CreatePellets();
         }
+
     }
 
     /*
@@ -275,6 +404,7 @@ namespace
                     break;
 
                 case ::CellState::Snake:
+                case ::CellState::SnakeHead:
                     color = { 34, 139, 34, 0xFF };
                     break;
 
@@ -309,7 +439,7 @@ namespace
         clock::time_point startFrameTime;
         chron::duration<float> frameRenderTime;
 
-        constexpr float frameTime = 1000.0F / 60.0F; // 60 fps
+        constexpr float frameTime = 1000.0F / 15.0F; // 60 fps
 
         
         while(run)
