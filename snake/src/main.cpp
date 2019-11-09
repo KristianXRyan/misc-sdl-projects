@@ -54,7 +54,18 @@ namespace
             {
                 return true;
             }
+            
             return false;
+        }
+
+        bool operator!=(coord other)
+        {
+            if((this->x == other.x) && (this->y == other.y))
+            {
+                return false;
+            }
+            
+            return true;
         }
     };
 
@@ -77,6 +88,10 @@ namespace
     // game constructs and data
     constexpr unsigned numRows = 25;
     constexpr unsigned numCols = 25;
+
+    constexpr unsigned redScore   =    10;
+    constexpr unsigned greenScore =     5;
+    constexpr unsigned growScore  =    15;
 
     static Pellet greenPel = { {0, 0}, ::CellState::GreenPellet };
     static Pellet redPel = { {0, 0}, ::CellState::RedPellet };
@@ -104,6 +119,8 @@ namespace
                                      .count());
         
         std::uniform_int_distribution<unsigned> dis(0, numRows);
+
+        // destroy red pellet if it hasn't been already
         
         auto makePellet = [&](::CellState type)
                           {
@@ -290,7 +307,8 @@ namespace
      */
     static inline void Simulate()
     {
-        auto &headCoord = ::player.allCoords[0];// 0 will always be the head
+        auto &headCoord  = ::player.allCoords[0]; // 0 will always be the head
+        bool foundPellet =                 false;
 
         // check that the snake head isn't touching the snake body, if so,
         // kill the game
@@ -303,14 +321,35 @@ namespace
             }
         }
 
+        auto destroyRedPellet = [&]()
+                                {
+                                    ::redPel.co = { -1, -1 };
+                                    for(auto &i : cells)
+                                    {
+                                        for(auto &j : i)
+                                        {
+                                            if(j == ::CellState::RedPellet)
+                                            {
+                                                j = ::CellState::Nothing;
+                                            }
+                                        }
+                                    }
+                                };
+
         // check if the snake head is touching any pellets
         if(headCoord == ::greenPel.co)
         {
-            // TODO
+            ::player.points += greenScore;
+            ::greenPelletExists = false;
+            ::greenPel.co = ::coord{ -1, -1 };
+            destroyRedPellet();
+            foundPellet = true;
         }
         else if(headCoord == ::redPel.co)
         {
-            // TODO
+            ::player.points += redScore;
+            foundPellet = true;
+            destroyRedPellet();
         }
 
         switch(::player.currentDirection)
@@ -352,16 +391,22 @@ namespace
             break;
         }
 
-        std::cout << "Made it...\n";
         // change snake coords in the cells
         cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
         for(int i = 0; i < numRows; i++)
         {
             for(int j = 0; j < numCols; j++)
             {
-                if(cells[i][j] == ::CellState::SnakeHead)
+                // moving the head
+                if((cells[i][j] == ::CellState::SnakeHead)
+                   && (::coord{ i, j } != headCoord)) // make sure it's not the new head
                 {
-                    //cells[i][j]
+                    // growing the snake's body if found enough food
+                    if((foundPellet) && (::player.points % ::growScore == 0))
+                    {
+                        ::player.allCoords.push_back({ i, j });
+                    }
+                    cells[i][j] = ::CellState::Nothing;
                 }
             }
         }
@@ -369,9 +414,8 @@ namespace
         // init pellets if they have already been eaten
         if(!::greenPelletExists)
         {
-            CreatePellets();
+            ::CreatePellets();
         }
-
     }
 
     /*
