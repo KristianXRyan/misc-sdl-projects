@@ -27,7 +27,6 @@ namespace
     {
         Nothing,
         Snake,
-//        SnakeHead,
 
         GreenPellet,
         RedPellet
@@ -69,10 +68,6 @@ namespace
             return true;
         }
 
-        void print()
-        {
-            std::cout << "Coord: " << x << ' ' << y << '\n';
-        }
     };
 
     // Struct represnting the ::player.
@@ -111,6 +106,79 @@ namespace
                                                          ::CellState::Nothing));
 
     static Snake player;
+
+    
+    /*
+     * Sets the new state of the cells.
+     */
+    static inline void RenewBoard()
+    {
+        // renew all non-snake parts
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                coord curCoord = { i, j };
+                bool isSnakePiece = false;
+                bool isPelletPiece = false;
+
+                // determine if the current cell is actually part of the snake
+                for(const auto &snCoord : ::player.allCoords)
+                {
+                    if(snCoord == curCoord)
+                    {
+                        isSnakePiece = true;
+                    }
+                }
+
+                if(::greenPel.co != curCoord
+                   && ((cells[i][j] == ::CellState::GreenPellet)))
+                {
+                    ::cells[i][j] = ::CellState::Nothing;
+                }
+                else if(::redPel.co != curCoord
+                        && (cells[i][j] == ::CellState::RedPellet))
+                {
+                    ::cells[i][j] = ::CellState::Nothing;
+                }
+
+                // remove the snake parts of the board if they're no longer
+                // part of the snake
+                if((!isSnakePiece)
+                   && ((cells[i][j] == ::CellState::Snake)))
+                {
+                    cells[i][j] = ::CellState::Nothing;
+                }
+            }
+        }
+
+        
+
+        // renew all snake parts
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                coord curCoord = { i, j };
+                bool isSnakePiece = false;
+
+                // determine if the current cell is actually part of the snake
+                for(const auto &snCoord : ::player.allCoords)
+                {
+                    if((snCoord == curCoord)
+                       && ((cells[curCoord.x][curCoord.y] != ::CellState::Snake)))
+                    {
+                        isSnakePiece = true;
+                    }
+                }
+
+                if(isSnakePiece)
+                {
+                    cells[i][j] = ::CellState::Snake;
+                }
+            }
+        } 
+    }
 
     /*
      * Creates pellets on the map.
@@ -159,7 +227,65 @@ namespace
         makePellet(::CellState::RedPellet);
 
         ::greenPelletExists = true;
+
     }
+
+    /*
+     * Inits the snake.
+     */
+    static void InitSnake()
+    {
+
+        ::player.allCoords.clear();
+              
+        bool hasMadeSnake = false;
+
+        std::mt19937 randomGenerator(std
+                                     ::chrono
+                                     ::high_resolution_clock
+                                     ::now()
+                                     .time_since_epoch()
+                                     .count());
+        
+        std::uniform_int_distribution<unsigned> colDis(0,
+                                                       numCols);
+
+        std::uniform_int_distribution<unsigned> rowDis(0,
+                                                       numRows);
+        while(!hasMadeSnake)
+        {
+            for(unsigned i = 0; i < numRows; i++)
+            {
+                if(rowDis(randomGenerator) == 0)
+                {
+                    for(unsigned j = 0; j < numCols; j++)
+                    {
+                        ::CellState &curCell = cells[i][j];
+                        // also check to make sure the snake
+                        // doesn't spawn on a pellet
+                        if((colDis(randomGenerator) == 0)
+                           && ((curCell != ::CellState::RedPellet)
+                               && (curCell != ::CellState::GreenPellet)))
+                        {
+                            ::player.allCoords
+                                .push_back({ static_cast<int>(i),
+                                             static_cast<int>(j) });
+                            ::player.allCoords
+                                  .push_back({ static_cast<int>(i - 1),
+                                               static_cast<int>(j) });
+                            ::player.allCoords
+                                  .push_back({ static_cast<int>(i - 2),
+                                               static_cast<int>(j) });
+                                                 
+                            hasMadeSnake = true;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+   }
 
     /*
      * Inits the SDL contructs and the board of cells.
@@ -186,59 +312,7 @@ namespace
 
         ::CreatePellets();
 
-        auto initSnake = [&]()
-                         {
-                             
-                             bool hasMadeSnake = false;
-
-                             std::mt19937 randomGenerator(std
-                                                          ::chrono
-                                                          ::high_resolution_clock
-                                                          ::now()
-                                                          .time_since_epoch()
-                                                          .count());
-        
-                             std::uniform_int_distribution<unsigned> colDis(0,
-                                                                       numCols);
-
-                             std::uniform_int_distribution<unsigned> rowDis(0,
-                                                                            numRows);
-                             while(!hasMadeSnake)
-                             {
-                                 for(unsigned i = 0; i < numRows; i++)
-                                 {
-                                     if(rowDis(randomGenerator) == 0)
-                                     {
-                                         for(unsigned j = 0; j < numCols; j++)
-                                         {
-                                             ::CellState &curCell = cells[i][j];
-                                             // also check to make sure the snake
-                                             // doesn't spawn on a pellet
-                                             if((colDis(randomGenerator) == 0)
-                                                && ((curCell != ::CellState::RedPellet)
-                                                    && (curCell != ::CellState::GreenPellet)))
-                                             {
-                                                 //curCell = ::CellState::SnakeHead;
-                                                 ::player.allCoords
-                                                       .push_back({ static_cast<int>(i),
-                                                                    static_cast<int>(j) });
-                                                 ::player.allCoords
-                                                       .push_back({ static_cast<int>(i - 1),
-                                                                    static_cast<int>(j) });
-                                                 ::player.allCoords
-                                                       .push_back({ static_cast<int>(i - 2),
-                                                                    static_cast<int>(j) });
-                                                 
-                                                 hasMadeSnake = true;
-                                                 return;
-                                             }
-                                         }
-                                     }
-                                 }
-                             }
-                         };
-
-        initSnake();
+        ::InitSnake();
         
         return true;
     }
@@ -313,7 +387,36 @@ namespace
      */
     static void Die()
     {
-        exit(0);
+        SDL_MessageBoxButtonData mbbd[] =
+            {
+                { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue"},
+                { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Quit"}
+            };
+        
+        SDL_MessageBoxData mbd =
+            {
+                SDL_MESSAGEBOX_INFORMATION,
+                nullptr,
+                "You Died!",
+                "You have died.\nPlay again?",
+                SDL_arraysize(mbbd),
+                mbbd,
+                nullptr
+            };
+        
+        int buttonId;
+        SDL_ShowMessageBox(&mbd, &buttonId);
+
+        if(buttonId == 0)
+        {
+            ::CreatePellets();
+            ::InitSnake();
+            ::RenewBoard();
+        }
+        else
+        {
+            ::shouldExit = true;
+        }
     }
 
     /*
@@ -345,7 +448,6 @@ namespace
      */
     static inline void InterpretInput(coord &headCoord)
     {
-        //std::cout << "Coord " << headCoord.x << ' ' << headCoord.y << '\n';
 
         switch(::player.currentDirection)
         {
@@ -389,67 +491,6 @@ namespace
             break;
         }
 
-        //std::cout << "Coord " << headCoord.x << ' ' << headCoord.y << '\n';
-    }
-
-    /*
-     * Sets the new state of the cells.
-     */
-    static inline void RenewBoard()
-    {
-        // renew all non-snake parts
-        for(int i = 0; i < numRows; i++)
-        {
-            for(int j = 0; j < numCols; j++)
-            {
-                coord curCoord = { i, j };
-                bool isSnakePiece = false;
-
-                // determine if the current cell is actually part of the snake
-                for(const auto &snCoord : ::player.allCoords)
-                {
-                    if(snCoord == curCoord)
-                    {
-                        isSnakePiece = true;
-                    }
-                }
-
-                // remove the snake parts of the board if they're no longer
-                // part of the snake
-                if((!isSnakePiece)
-                   && ((cells[i][j] == ::CellState::Snake)))
-                       //|| (cells[i][j] == ::CellState::SnakeHead)))
-                {
-                    cells[i][j] = ::CellState::Nothing;
-                }
-            }
-        }
-
-        // renew all snake parts
-        for(int i = 0; i < numRows; i++)
-        {
-            for(int j = 0; j < numCols; j++)
-            {
-                coord curCoord = { i, j };
-                bool isSnakePiece = false;
-
-                // determine if the current cell is actually part of the snake
-                for(const auto &snCoord : ::player.allCoords)
-                {
-                    if((snCoord == curCoord)
-                       && ((cells[curCoord.x][curCoord.y] != ::CellState::Snake)))
-                           //    || (cells[curCoord.x][curCoord.y]) != ::CellState::SnakeHead))
-                    {
-                        isSnakePiece = true;
-                    }
-                }
-
-                if(isSnakePiece)
-                {
-                    cells[i][j] = ::CellState::Snake;
-                }
-            }
-        } 
     }
 
     /*
@@ -458,7 +499,6 @@ namespace
     static inline void ChangeSnakePos(coord &originalCoord, coord &headCoord, bool foundPellet)
     {
 
-        //cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
         coord back = headCoord;
         coord oldBack = ::player.allCoords[::player.allCoords.size() - 1];
 
@@ -538,12 +578,6 @@ namespace
             ::ChangeSnakePos(oHeadCoord, headCoord, foundPellet);
         ::RenewBoard();
 
-        std::cout << "-------------------------------------\n";
-        for(auto it = ::player.allCoords.begin(); it < ::player.allCoords.end(); it++)
-        {
-            std::cout << "Snake part: " << (*it).x << ' ' << (*it).y << '\n';
-        }
-        
         // init pellets if they have already been eaten
         if(!::greenPelletExists)
         {
@@ -581,7 +615,6 @@ namespace
                     break;
 
                 case ::CellState::Snake:
-                    //case ::CellState::SnakeHead:
                     color = { 34, 139, 34, 0xFF };
                     break;
 
