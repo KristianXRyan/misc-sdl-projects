@@ -1,7 +1,8 @@
 #+AUTHOR: Ryan Jeffrey
-#+TITLE: Snake
+#+Title: Miscellaneous SDL projects
 
-An implementation of the classic game snake. Use WASD or the arrow keys to play.
+Various projects using C/C++ and SDL2. Usually things like simple games and
+cellular automata.
 
 * Compilation
 In order to build the game you need a modern C++17 compliant compiler, 
@@ -15,3 +16,4 @@ sudo pacman -S cmake make gcc sdl2 sdl2_ttf
 #+END_SRC
 
 ...and you can install sdl2_gpu via the [[https://aur.archlinux.org/packages/sdl2_gpu-git/][AUR]].
+
