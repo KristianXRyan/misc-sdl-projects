@@ -459,6 +459,13 @@ namespace
     {
 
         //cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
+        coord back = headCoord;
+        coord oldBack = ::player.allCoords[::player.allCoords.size() - 1];
+
+        ::player.allCoords.insert(::player.allCoords.begin(), back);
+        ::player.allCoords.pop_back();
+        
+        
         coord snakePartCoord;
         
         for(int i = 0; i < numRows; i++)
@@ -474,7 +481,7 @@ namespace
                     if((foundPellet) && (::player.points % ::growScore == 0))
                     {
                         ::player.allCoords.insert(::player.allCoords.end() - ::player.snakeLength,
-                                                  { i, j });
+                                                  oldBack);
                         ::player.snakeLength++;
                         ::RenewBoard();
                         return;
@@ -484,17 +491,6 @@ namespace
                 }
             }
         }
-        // TODO linked list for easy swapping of data
-        coord back = headCoord;
-            //::player.allCoords[::player.allCoords.size() - 1];
-        coord front = ::player.allCoords[0];
-
-        back.print();
-        front.print();
-
-        ::player.allCoords.insert(::player.allCoords.begin(), back);
-        ::player.allCoords.pop_back();
-        
         ::RenewBoard();
     }
     
