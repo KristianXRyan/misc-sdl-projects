@@ -318,6 +318,53 @@ namespace
     }
 
     /*
+     * Display a quit message.
+     */
+    static void DisplayQuitMessage(const char *title, const char *message)
+    {
+        SDL_MessageBoxButtonData mbbd[] =
+            {
+                { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue"},
+                { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Quit"}
+            };
+        
+        SDL_MessageBoxData mbd =
+            {
+                SDL_MESSAGEBOX_INFORMATION,
+                nullptr,
+                title,
+                message,
+                SDL_arraysize(mbbd),
+                mbbd,
+                nullptr
+            };
+        
+        int buttonId;
+        SDL_ShowMessageBox(&mbd, &buttonId);
+
+        if(buttonId == 0)
+        {
+            ::CreatePellets();
+            ::InitSnake();
+            ::RenewBoard();
+        }
+        else
+        {
+            ::shouldExit = true;
+        }
+ 
+    }
+    
+    /*
+     * Kill the snake and exit the game.
+     */
+    static void Die()
+    {
+        ::DisplayQuitMessage("You died!", "You died.\nPlay again?");
+    }
+
+
+    /*
      * Interprets keyboard input. Can use arrow keys and WASD.
      */
     static inline void GetKbdInput(SDL_Event &event)
@@ -345,7 +392,7 @@ namespace
             break;
 
         case SDLK_ESCAPE:
-            // Quit menu TODO
+            ::DisplayQuitMessage("Quit?", "Would you like to quit?");
             break;
 
         default:
@@ -380,43 +427,6 @@ namespace
             }
         }
 
-    }
-
-    /*
-     * Kill the snake and exit the game.
-     */
-    static void Die()
-    {
-        SDL_MessageBoxButtonData mbbd[] =
-            {
-                { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Continue"},
-                { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 1, "Quit"}
-            };
-        
-        SDL_MessageBoxData mbd =
-            {
-                SDL_MESSAGEBOX_INFORMATION,
-                nullptr,
-                "You Died!",
-                "You have died.\nPlay again?",
-                SDL_arraysize(mbbd),
-                mbbd,
-                nullptr
-            };
-        
-        int buttonId;
-        SDL_ShowMessageBox(&mbd, &buttonId);
-
-        if(buttonId == 0)
-        {
-            ::CreatePellets();
-            ::InitSnake();
-            ::RenewBoard();
-        }
-        else
-        {
-            ::shouldExit = true;
-        }
     }
 
     /*
