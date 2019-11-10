@@ -8,7 +8,6 @@ else()
   message("Building for debug")
 	
 endif()
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin/")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -34,4 +33,5 @@ target_link_libraries(
 
     SDL2_gpu
     SDL2_ttf
+
 )

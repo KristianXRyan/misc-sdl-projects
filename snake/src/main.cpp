@@ -27,7 +27,7 @@ namespace
     {
         Nothing,
         Snake,
-        SnakeHead,
+//        SnakeHead,
 
         GreenPellet,
         RedPellet
@@ -67,6 +67,11 @@ namespace
             }
             
             return true;
+        }
+
+        void print()
+        {
+            std::cout << "Coord: " << x << ' ' << y << '\n';
         }
     };
 
@@ -213,10 +218,17 @@ namespace
                                                 && ((curCell != ::CellState::RedPellet)
                                                     && (curCell != ::CellState::GreenPellet)))
                                              {
-                                                 curCell = ::CellState::SnakeHead;
+                                                 //curCell = ::CellState::SnakeHead;
                                                  ::player.allCoords
                                                        .push_back({ static_cast<int>(i),
                                                                     static_cast<int>(j) });
+                                                 ::player.allCoords
+                                                       .push_back({ static_cast<int>(i - 1),
+                                                                    static_cast<int>(j) });
+                                                 ::player.allCoords
+                                                       .push_back({ static_cast<int>(i - 2),
+                                                                    static_cast<int>(j) });
+                                                 
                                                  hasMadeSnake = true;
                                                  return;
                                              }
@@ -333,6 +345,8 @@ namespace
      */
     static inline void InterpretInput(coord &headCoord)
     {
+        //std::cout << "Coord " << headCoord.x << ' ' << headCoord.y << '\n';
+
         switch(::player.currentDirection)
         {
         case ::SnakeDirection::Up:
@@ -374,6 +388,8 @@ namespace
         default: // no direction
             break;
         }
+
+        //std::cout << "Coord " << headCoord.x << ' ' << headCoord.y << '\n';
     }
 
     /*
@@ -381,6 +397,7 @@ namespace
      */
     static inline void RenewBoard()
     {
+        // renew all non-snake parts
         for(int i = 0; i < numRows; i++)
         {
             for(int j = 0; j < numCols; j++)
@@ -389,7 +406,7 @@ namespace
                 bool isSnakePiece = false;
 
                 // determine if the current cell is actually part of the snake
-                for(auto &snCoord : ::player.allCoords)
+                for(const auto &snCoord : ::player.allCoords)
                 {
                     if(snCoord == curCoord)
                     {
@@ -400,10 +417,36 @@ namespace
                 // remove the snake parts of the board if they're no longer
                 // part of the snake
                 if((!isSnakePiece)
-                   && ((cells[i][j] == ::CellState::Snake)
-                       || (cells[i][j] == ::CellState::SnakeHead)))
+                   && ((cells[i][j] == ::CellState::Snake)))
+                       //|| (cells[i][j] == ::CellState::SnakeHead)))
                 {
                     cells[i][j] = ::CellState::Nothing;
+                }
+            }
+        }
+
+        // renew all snake parts
+        for(int i = 0; i < numRows; i++)
+        {
+            for(int j = 0; j < numCols; j++)
+            {
+                coord curCoord = { i, j };
+                bool isSnakePiece = false;
+
+                // determine if the current cell is actually part of the snake
+                for(const auto &snCoord : ::player.allCoords)
+                {
+                    if((snCoord == curCoord)
+                       && ((cells[curCoord.x][curCoord.y] != ::CellState::Snake)))
+                           //    || (cells[curCoord.x][curCoord.y]) != ::CellState::SnakeHead))
+                    {
+                        isSnakePiece = true;
+                    }
+                }
+
+                if(isSnakePiece)
+                {
+                    cells[i][j] = ::CellState::Snake;
                 }
             }
         } 
@@ -412,40 +455,47 @@ namespace
     /*
      * Change the coordinates of the snake head in the cells array.
      */
-    static inline void ChangeSnakeHead(coord &headCoord, bool foundPellet)
+    static inline void ChangeSnakePos(coord &originalCoord, coord &headCoord, bool foundPellet)
     {
-        cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
+
+        //cells[headCoord.x][headCoord.y] = ::CellState::SnakeHead;
+        coord snakePartCoord;
+        
         for(int i = 0; i < numRows; i++)
         {
             for(int j = 0; j < numCols; j++)
             {
                 ::coord curCoord = { i, j };
                 // moving the head
-                if((cells[i][j] == ::CellState::SnakeHead)
-                   && (::coord{ i, j } != headCoord)) // make sure it's not the new head
+                if((coord{i, j } == originalCoord)
+                   && (curCoord != headCoord)) // make sure it's not the new head
                 {
                     // growing the snake's body if found enough food
                     if((foundPellet) && (::player.points % ::growScore == 0))
                     {
-                        ::player.allCoords.insert(::player.allCoords.begin(), { i, j });
+                        ::player.allCoords.insert(::player.allCoords.end() - ::player.snakeLength,
+                                                  { i, j });
+                        ::player.snakeLength++;
+                        ::RenewBoard();
                         return;
                     }
 
-                    coord &snakePartCoord = curCoord; // .begin()
-                    // move the snake's body
-                    for(auto it = ::player.allCoords.begin() + 1; it <= ::player.allCoords.end();
-                        it++)
-                    {
-                        *it = snakePartCoord;
-                        snakePartCoord = *it;
-                    }
-
-                    ::RenewBoard();
-                    return;
-
+                    snakePartCoord = curCoord;
                 }
             }
         }
+        // TODO linked list for easy swapping of data
+        coord back = headCoord;
+            //::player.allCoords[::player.allCoords.size() - 1];
+        coord front = ::player.allCoords[0];
+
+        back.print();
+        front.print();
+
+        ::player.allCoords.insert(::player.allCoords.begin(), back);
+        ::player.allCoords.pop_back();
+        
+        ::RenewBoard();
     }
     
     /*
@@ -453,7 +503,8 @@ namespace
      */
     static inline void Simulate()
     {
-        coord &headCoord  = ::player.allCoords[0]; // 0 will always be the head
+        coord headCoord   = ::player.allCoords[0]; // 0 will always be the head
+        coord oHeadCoord  =             headCoord;
         bool  foundPellet =                 false;
 
         // check that the snake head isn't touching the snake body, if so,
@@ -466,6 +517,7 @@ namespace
                 ::Die();
             }
         }
+
 
         foundPellet = ::IsSnakeIsTouchingPellet(headCoord);
         if(foundPellet)
@@ -483,10 +535,12 @@ namespace
             }
             
         }
-
-        ::InterpretInput(headCoord);
         
-        ::ChangeSnakeHead(headCoord, foundPellet);
+        ::InterpretInput(headCoord);
+
+        if(::player.currentDirection != ::SnakeDirection::None)
+            ::ChangeSnakePos(oHeadCoord, headCoord, foundPellet);
+        ::RenewBoard();
 
         std::cout << "-------------------------------------\n";
         for(auto it = ::player.allCoords.begin(); it < ::player.allCoords.end(); it++)
@@ -531,7 +585,7 @@ namespace
                     break;
 
                 case ::CellState::Snake:
-                case ::CellState::SnakeHead:
+                    //case ::CellState::SnakeHead:
                     color = { 34, 139, 34, 0xFF };
                     break;
 
