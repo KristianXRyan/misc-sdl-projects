@@ -4,6 +4,13 @@ use sdl2::rect::Rect;
 use std::error::Error;
 use std::time::{Duration, Instant};
 
+#[repr(usize)]
+enum NumType {
+    P1Score = 0,
+    P2Score = 1,
+    FPS = 2
+}
+
 enum PaddleDuration {
     Up,
     Down,
@@ -75,7 +82,6 @@ struct SDLData<'a> {
     // item 1: player 1 score
     // item 2: player 2 score
     // item 3: fps
-
     drawables: [Option<sdl2::surface::Surface<'a>>; 3],
     drawables_location: [Option<Rect>; 3],
 }
@@ -147,15 +153,20 @@ impl<'a> SDLData<'a> {
     }
 
     // draws a number as text to the screen
-    fn draw_number(&mut self, num: i32, where_to: Rect) -> Result<(), Box<dyn Error>> {
+    fn draw_number(&mut self, num: i32, where_to: Rect, num_meaning: NumType) -> Result<(), Box<dyn Error>> {
         // rust won't let me wrap this in a struct...
-        let mut font = self.ttf_context.load_font("arial.ttf", 128)?;
+        let mut font = self.ttf_context.load_font("arial.ttf", 16)?;
         font.set_style(sdl2::ttf::FontStyle::BOLD);
 
         let surface = font
             .render(num.to_string().as_str())
             .blended(sdl2::pixels::Color::RGBA(255, 0, 0, 255))?;
 
+        let index = num_meaning as usize;
+
+        self.drawables[index] = Some(surface);
+        self.drawables_location[index] = Some(where_to);
+        
         Ok(())
     }
 }
@@ -218,13 +229,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         if start_second_time.elapsed() >= ONE_SECOND {
             // render the framerate
             if show_frame_rate {
-                game_data.draw_number(frames, Rect::new(850, 0, 50, 50))?;
+                game_data.draw_number(frames, Rect::new(850, 0, 50, 50), NumType::FPS)?;
             }
 
             frames = 0;
             start_second_time = Instant::now();
         }
 
+        game_data.draw_number(pdata.player1_score as i32, Rect::new(325, 30, 50, 50), NumType::P1Score)?;
+
+        
+        game_data.draw_number(pdata.player1_score as i32, Rect::new(500, 30, 50, 50), NumType::P2Score)?;
         // draw
         game_data.draw_window(&pdata)?;
     }
