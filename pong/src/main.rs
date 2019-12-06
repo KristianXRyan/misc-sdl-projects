@@ -62,38 +62,46 @@ impl PongData {
     fn simulate(&mut self) {}
 }
 
-struct SDLData {
-    // both of these are in the SDLData  so they don't get destroyed until the game ends
+struct SDLData<'a> {
     context: sdl2::Sdl,
     video_subsystem: sdl2::VideoSubsystem,
 
     // usable data
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
+    ttf_context: sdl2::ttf::Sdl2TtfContext,
+    drawables: Option<sdl2::surface::Surface<'a>>,
+    drawables_location: Option<Rect>,
 }
 
-impl SDLData  {
-    fn new() -> Result<SDLData , Box<dyn Error>> {
+impl<'a> SDLData<'a> {
+    fn new() -> Result<SDLData<'a>, Box<dyn Error>> {
         let new_context = sdl2::init()?;
         let new_vsubsystem = new_context.video()?;
         let new_window = new_vsubsystem
             .window("Pong", 900, 600)
             .position_centered()
+            .opengl()
             .build()?;
 
         let new_canvas = new_window.into_canvas().build()?;
         let new_event_pump = new_context.event_pump()?;
 
-        Ok(SDLData  {
+        let new_ttf_context = sdl2::ttf::init()?;
+
+        Ok(SDLData {
             context: new_context,
             video_subsystem: new_vsubsystem,
             canvas: new_canvas,
             event_pump: new_event_pump,
+            ttf_context: new_ttf_context,
+            drawables: None,
+            drawables_location: None,
         })
     }
 
     // renders the entire game
-    fn draw_window(&mut self, pdata: &PongData) {
+    fn draw_window(&mut self, pdata: &PongData) -> Result<(), Box<dyn Error>> {
         // clear the screen
         self.canvas
             .set_draw_color(sdl2::pixels::Color::RGB(0, 0, 0));
@@ -110,14 +118,47 @@ impl SDLData  {
         let net: Rect = Rect::new(445, 0, 10, 600);
         let _ = self.canvas.draw_rect(net);
 
+        match &self.drawables {
+            Some(x) => {
+                self.canvas.copy(
+                    &self
+                        .canvas
+                        .texture_creator()
+                        .create_texture_from_surface(&x)?,
+                    None,
+                    Some(self.drawables_location.unwrap()),
+                )?;
+            }
+
+            None => {}
+        }
+
         self.canvas.present();
+
+        Ok(())
+    }
+
+    // draws a number as text to the screen
+    fn draw_number(&mut self, num: i32, where_to: Rect) -> Result<(), Box<dyn Error>> {
+        // rust won't let me wrap this in a struct...
+        let mut font = self.ttf_context.load_font("arial.ttf", 12)?;
+        font.set_style(sdl2::ttf::FontStyle::BOLD);
+
+        let surface = font
+            .render(num.to_string().as_str())
+            .blended(sdl2::pixels::Color::RGBA(255, 0, 0, 255))?;
+
+        self.drawables = Some(surface);
+        self.drawables_location = Some(where_to);
+        Ok(())
     }
 }
 
+// main
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Initializing SDL2...");
 
-    let mut game_data = SDLData ::new()?;
+    let mut game_data = SDLData::new()?;
     let mut pdata = PongData::new();
 
     // framerate control structs
@@ -125,8 +166,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut start_second_time: Instant = Instant::now();
     let mut frame_render_time: Duration;
     let mut frames: i32 = 0;
+    let show_frame_rate: bool = true;
 
-    const FRAME_TIME: f32 = 1000f32 / 30f32;
+    const FRAME_TIME: f32 = 1000f32 / 60f32;
     const ONE_SECOND: Duration = Duration::from_millis(1000);
 
     println!("SDL is done initializing");
@@ -160,13 +202,19 @@ fn main() -> Result<(), Box<dyn Error>> {
         if FRAME_TIME > frame_render_time.as_millis() as f32 {
             frames += 1;
 
-            let sleep_time: Duration = Duration::from_millis((FRAME_TIME as u128 - frame_render_time.as_millis()) as u64);
+            let sleep_time: Duration =
+                Duration::from_millis((FRAME_TIME as u128 - frame_render_time.as_millis()) as u64);
 
             std::thread::sleep(sleep_time);
         }
 
+        // for keeping track of the frame rate. runs once a second.
         if start_second_time.elapsed() >= ONE_SECOND {
-            println!("{}", frames);
+            // render the framerate
+            if show_frame_rate {
+                game_data.draw_number(frames, Rect::new(100, 100, 100, 100))?;
+            }
+
             frames = 0;
             start_second_time = Instant::now();
         }
