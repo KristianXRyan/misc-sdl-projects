@@ -44,7 +44,6 @@ impl PongData {
         } else {
             y = rect.y;
         }
-
         Rect::new(rect.x, y, rect.width(), rect.height())
     }
 
@@ -58,7 +57,7 @@ impl PongData {
         self.player1 = PongData::correct_position(self.player1);
     }
 
-    // runs the game simulation
+    // runs the game simulation (AI and moving the ball)
     fn simulate(&mut self) {}
 }
 
@@ -70,8 +69,15 @@ struct SDLData<'a> {
     canvas: sdl2::render::Canvas<sdl2::video::Window>,
     event_pump: sdl2::EventPump,
     ttf_context: sdl2::ttf::Sdl2TtfContext,
-    drawables: Option<sdl2::surface::Surface<'a>>,
-    drawables_location: Option<Rect>,
+
+    // parallel arrays representing text areas
+
+    // item 1: player 1 score
+    // item 2: player 2 score
+    // item 3: fps
+
+    drawables: [Option<sdl2::surface::Surface<'a>>; 3],
+    drawables_location: [Option<Rect>; 3],
 }
 
 impl<'a> SDLData<'a> {
@@ -95,8 +101,9 @@ impl<'a> SDLData<'a> {
             canvas: new_canvas,
             event_pump: new_event_pump,
             ttf_context: new_ttf_context,
-            drawables: None,
-            drawables_location: None,
+
+            drawables: [None, None, None],
+            drawables_location: [None, None, None],
         })
     }
 
@@ -118,21 +125,22 @@ impl<'a> SDLData<'a> {
         let net: Rect = Rect::new(445, 0, 10, 600);
         let _ = self.canvas.draw_rect(net);
 
-        match &self.drawables {
-            Some(x) => {
-                self.canvas.copy(
-                    &self
-                        .canvas
-                        .texture_creator()
-                        .create_texture_from_surface(&x)?,
-                    None,
-                    Some(self.drawables_location.unwrap()),
-                )?;
+        for item in 0..self.drawables.len() {
+            match &self.drawables[item] {
+                Some(x) => {
+                    self.canvas.copy(
+                        &self
+                            .canvas
+                            .texture_creator()
+                            .create_texture_from_surface(&x)?,
+                        None,
+                        Some(self.drawables_location[item].unwrap()),
+                    )?;
+                }
+
+                None => {}
             }
-
-            None => {}
         }
-
         self.canvas.present();
 
         Ok(())
@@ -148,8 +156,6 @@ impl<'a> SDLData<'a> {
             .render(num.to_string().as_str())
             .blended(sdl2::pixels::Color::RGBA(255, 0, 0, 255))?;
 
-        self.drawables = Some(surface);
-        self.drawables_location = Some(where_to);
         Ok(())
     }
 }
