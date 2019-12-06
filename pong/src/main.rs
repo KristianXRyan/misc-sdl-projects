@@ -141,7 +141,7 @@ impl<'a> SDLData<'a> {
     // draws a number as text to the screen
     fn draw_number(&mut self, num: i32, where_to: Rect) -> Result<(), Box<dyn Error>> {
         // rust won't let me wrap this in a struct...
-        let mut font = self.ttf_context.load_font("arial.ttf", 12)?;
+        let mut font = self.ttf_context.load_font("arial.ttf", 128)?;
         font.set_style(sdl2::ttf::FontStyle::BOLD);
 
         let surface = font
@@ -166,7 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut start_second_time: Instant = Instant::now();
     let mut frame_render_time: Duration;
     let mut frames: i32 = 0;
-    let show_frame_rate: bool = true;
+    let show_frame_rate: bool = should_render_framerate();
 
     const FRAME_TIME: f32 = 1000f32 / 60f32;
     const ONE_SECOND: Duration = Duration::from_millis(1000);
@@ -212,7 +212,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         if start_second_time.elapsed() >= ONE_SECOND {
             // render the framerate
             if show_frame_rate {
-                game_data.draw_number(frames, Rect::new(100, 100, 100, 100))?;
+                game_data.draw_number(frames, Rect::new(850, 0, 50, 50))?;
             }
 
             frames = 0;
@@ -220,9 +220,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         // draw
-        game_data.draw_window(&pdata);
+        game_data.draw_window(&pdata)?;
     }
 
     println!("Exiting the game...");
     Ok(())
+}
+
+// determines if the user wants to see the framerate
+fn should_render_framerate() -> bool {
+    let args: Vec<String> = std::env::args().collect();
+
+    for i in 1..args.len() {
+        if "--frate" == args[i] {
+            return true;
+        }
+    }
+
+    false
 }
