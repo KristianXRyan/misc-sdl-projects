@@ -1,0 +1,15 @@
+#+AUTHOR: Ryan Jeffrey
+#+TITLE:  Pong
+
+A rewrite of pong made with Rust.
+
+This is an abysmal and terrible version of pong. It was merely meant to
+be a 'Hello World' program for the language. 
+
+* Building
+#+BEGIN_SRC shell
+cargo build --release
+#+END_SRC
+
+You will also need to have a font called arial.ttf in the root
+directory of the project.
