@@ -2,13 +2,13 @@ use sdl2::keyboard::Keycode;
 use sdl2::rect::Rect;
 
 use std::error::Error;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 #[repr(usize)]
 enum NumType {
     P1Score = 0,
     P2Score = 1,
-    FPS = 2
+    FPS = 2,
 }
 
 enum PaddleDuration {
@@ -16,13 +16,130 @@ enum PaddleDuration {
     Down,
 }
 
-const PADDLE_MOV: i32 = 20;
+enum PlayerNum {
+    P1,
+    P2,
+    None,
+}
+
+const PADDLE_MOV: i32 = 10;
+
+struct Ball {
+    location: Rect,
+    dx: i32,
+    dy: i32,
+}
+
+impl Ball {
+    const DEFAULT_POS: (i32, i32) = (450, 300);
+    
+    // inits a ball
+    fn new() -> Self {
+        let (dx, dy) = Self::reset_delta();
+        let (x, y) = Self::DEFAULT_POS;
+
+        Self {
+            location: Rect::new(x, y, 10, 10),
+            dx: dx,
+            dy: dy,
+        }
+    }
+
+    // bounces the ball (reverses its delta y and sometimes its delta x)
+    fn bounce(&mut self, on_x: bool) {
+        self.dy = -self.dy;
+
+        if on_x {
+            self.dx = -self.dx;
+        }
+    }
+
+    // checks if the ball is colliding with a paddle
+    fn check_collision_and_bounce(&mut self, rect: &Rect) {
+        if rect.intersection(self.location) != None {
+            self.bounce(true);
+        }
+    }
+
+    fn reset(&mut self) {
+        self.location.x = Self::DEFAULT_POS.0;
+        self.location.y = Self::DEFAULT_POS.1;
+
+        let deltas = Self::reset_delta();
+
+        self.dx = deltas.0;
+        self.dy = deltas.1;
+    }
+
+    // sets new dx and dy values
+    fn reset_delta() -> (i32, i32) {
+        let dy: i32;
+        let dx: i32;
+
+        // random number generator. takes the time from the epoch in nanoseconds
+        // and performs modulo on it. return either 1 or -1.
+        let positive_or_negative = || -> i32 {
+
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .subsec_nanos();
+
+            let result = nanos as i32 % 2;
+
+            if result == 1 {
+                return 1;
+            }
+            -1
+        };
+
+        dx = 3 * positive_or_negative();
+        dy = 3 * positive_or_negative();
+
+        (dx, dy)
+    }
+
+    // moves the ball around the screen. returns the player that scored.
+    fn simulate(&mut self, rect1: &Rect, rect2: &Rect) -> PlayerNum {
+        let mut player = PlayerNum::None;
+
+        // move the ball
+        self.location.set_x(self.location.x() + self.dx);
+        self.location.set_y(self.location.y() + self.dy);
+
+        // check to make sure it has not gone out of bounds.
+        // if it has, then bounce.
+
+        if self.location.x >= 900 {
+            player = PlayerNum::P1;
+        } else if self.location.x <= 0 {
+            player = PlayerNum::P2;
+        }
+
+        if self.location.y >= 600 {
+            self.bounce(false);
+        } else if self.location.y <= 0 {
+            self.bounce(false);
+        }
+
+        match player {
+            PlayerNum::None => {
+                self.check_collision_and_bounce(rect1);
+                self.check_collision_and_bounce(rect2);
+            }
+
+            _ => {}
+        }
+
+        player
+    }
+}
 
 struct PongData {
     player1: Rect,
     player2: Rect,
 
-    ball: Rect,
+    ball: Ball,
 
     player1_score: u32,
     player2_score: u32,
@@ -30,42 +147,66 @@ struct PongData {
 
 impl PongData {
     // initialize default state for the game
-    fn new() -> PongData {
-        PongData {
+    fn new() -> Self {
+        Self {
             player1: Rect::new(20, 250, 20, 100),
             player2: Rect::new(850, 250, 20, 100),
-            ball: Rect::new(450, 300, 10, 10),
+            ball: Ball::new(),
             player1_score: 0,
             player2_score: 0,
         }
     }
 
     // makes sure the rect is in bounds.
-    fn correct_position(rect: Rect) -> Rect {
+    fn correct_position(rect: &mut Rect) {
         let y: i32;
 
         if rect.y <= 0 {
             y = 0;
-        } else if rect.y >= 800 {
-            y = 800;
+        } else if rect.y >= 500 {
+            y = 500;
         } else {
             y = rect.y;
         }
-        Rect::new(rect.x, y, rect.width(), rect.height())
+
+        rect.y = y;
     }
 
     // moves the player
-    fn move_player(&mut self, dir: PaddleDuration) {
+    fn move_player(dir: PaddleDuration, player: &mut Rect) {
         match dir {
-            PaddleDuration::Up => self.player1.y -= PADDLE_MOV,
-            PaddleDuration::Down => self.player1.y += PADDLE_MOV,
+            PaddleDuration::Up => player.y -= PADDLE_MOV,
+            PaddleDuration::Down => player.y += PADDLE_MOV,
         }
 
-        self.player1 = PongData::correct_position(self.player1);
+        PongData::correct_position(player);
     }
 
     // runs the game simulation (AI and moving the ball)
-    fn simulate(&mut self) {}
+    fn simulate(&mut self) {
+        match self.ball.simulate(&self.player1, &self.player2) {
+            PlayerNum::P1 => {
+                self.player1_score += 1;
+                self.ball.reset();
+                return;
+            }
+
+            PlayerNum::P2 => {
+                self.player2_score += 1;
+                self.ball.reset();
+                return;
+            }
+
+            PlayerNum::None => {}
+        }
+
+        // move the AI's paddle
+        if self.ball.location.y >= self.player2.y + 15 {
+            PongData::move_player(PaddleDuration::Down, &mut self.player2);
+        } else if self.ball.location.y <= self.player2.y + 15 {
+            PongData::move_player(PaddleDuration::Up, &mut self.player2);
+        }
+    }
 }
 
 struct SDLData<'a> {
@@ -125,7 +266,7 @@ impl<'a> SDLData<'a> {
             .set_draw_color(sdl2::pixels::Color::RGB(255, 255, 255));
         let _ = self.canvas.fill_rect(pdata.player1);
         let _ = self.canvas.fill_rect(pdata.player2);
-        let _ = self.canvas.fill_rect(pdata.ball);
+        let _ = self.canvas.fill_rect(pdata.ball.location);
 
         // render the board
         let net: Rect = Rect::new(445, 0, 10, 600);
@@ -153,7 +294,12 @@ impl<'a> SDLData<'a> {
     }
 
     // draws a number as text to the screen
-    fn draw_number(&mut self, num: i32, where_to: Rect, num_meaning: NumType) -> Result<(), Box<dyn Error>> {
+    fn draw_number(
+        &mut self,
+        num: i32,
+        where_to: Rect,
+        num_meaning: NumType,
+    ) -> Result<(), Box<dyn Error>> {
         // rust won't let me wrap this in a struct...
         let mut font = self.ttf_context.load_font("arial.ttf", 16)?;
         font.set_style(sdl2::ttf::FontStyle::BOLD);
@@ -166,7 +312,7 @@ impl<'a> SDLData<'a> {
 
         self.drawables[index] = Some(surface);
         self.drawables_location[index] = Some(where_to);
-        
+
         Ok(())
     }
 }
@@ -200,12 +346,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 sdl2::event::Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
-                } => pdata.move_player(PaddleDuration::Down),
+                } => PongData::move_player(PaddleDuration::Down, &mut pdata.player1),
 
                 sdl2::event::Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
-                } => pdata.move_player(PaddleDuration::Up),
+                } => PongData::move_player(PaddleDuration::Up, &mut pdata.player1),
                 _ => {}
             }
         }
@@ -236,10 +382,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             start_second_time = Instant::now();
         }
 
-        game_data.draw_number(pdata.player1_score as i32, Rect::new(325, 30, 50, 50), NumType::P1Score)?;
+        game_data.draw_number(
+            pdata.player1_score as i32,
+            Rect::new(325, 30, 50, 50),
+            NumType::P1Score,
+        )?;
 
-        
-        game_data.draw_number(pdata.player1_score as i32, Rect::new(500, 30, 50, 50), NumType::P2Score)?;
+        game_data.draw_number(
+            pdata.player2_score as i32,
+            Rect::new(500, 30, 50, 50),
+            NumType::P2Score,
+        )?;
         // draw
         game_data.draw_window(&pdata)?;
     }
